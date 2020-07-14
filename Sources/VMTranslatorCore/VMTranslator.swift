@@ -13,12 +13,21 @@ public final class VMTranslator {
             throw Error.missingFileName
         }
         
-        let fileName = arguments[1]
+        let codePath  = arguments[1]
+        var codeFiles: [String] = []
+        if codePath.hasSuffix(".vm") {
+            codeFiles.append(codePath)
+        } else {
+            try Folder(path: codePath).files.forEach { file in
+                if file.extension == "vm" { codeFiles.append(file.path) }
+            }
+        }
         
-        do {
-            try Folder.current.createFile(at: fileName)
-        } catch {
-            throw Error.failedToCreateFile
+        try codeFiles.forEach { path in
+            let fileContents = try String(contentsOfFile: path)
+            guard let parsedLines = Parser.parse(text: fileContents) else { throw Error.parsedToEmtpy }
+            // TODO: Process lines into assembly
+            // TODO: Write the file to disk
         }
     }
 }
@@ -26,6 +35,7 @@ public final class VMTranslator {
 public extension VMTranslator {
     enum Error: Swift.Error {
         case missingFileName
+        case parsedToEmtpy
         case failedToCreateFile
     }
 }
