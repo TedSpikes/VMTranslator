@@ -8,13 +8,38 @@
 import Foundation
 
 public class CodeGenerator {
-    private static var labelCount = 0
+    private static let basePointerAddressMap = [
+        "local"   : "R1",
+        "argument": "R2",
+        "pointer" : "R3",
+        "this"    : "R3",
+        "that"    : "R4",
+        "temp"    : "R5"
+    ]
+    private static let initializationCode: [String] = [
+        "// Set up the stack pointer",
+        "@256",
+        "D=A",
+        "@R0",
+        "M=D"
+    ]
+    private static let infiniteLoop: [String] = [
+        "(END)",
+        "@END",
+        "0;JMP"
+    ]
     
-    public static func assemble(vmCode: [String]) throws -> [String]  {
+    private var labelCount = 0
+    private var functionName: String
+    
+    init(functionName: String) {
+        self.functionName = functionName
+    }
+    
+    public func assemble(vmCode: [String]) throws -> [String]  {
         var result:[String] = []
-        
         // Prepend with setup code
-        result += initializationCode
+        result += CodeGenerator.initializationCode
         
         try vmCode.forEach { line in
             result.append("\n" + "// " + line)
@@ -37,60 +62,108 @@ public class CodeGenerator {
                 throw Error.invalidCommand
             }
         }
-        
         // Finish with an infinite loop
-        result += infiniteLoop
+        result += CodeGenerator.infiniteLoop
         return result
     }
     
-    private static let initializationCode: [String] = [
-        "// Set up stack pointer",
-        "@256",
-        "D=A",
-        "@R0",
-        "M=D"
-    ]
-    
-    private static let infiniteLoop: [String] = [
-        "(END)",
-        "@END",
-        "0;JMP"
-    ]
-    
-    private static func generateCode(forMemoryCommand command: String, arguments: [String]) throws -> [String]  {
+    private func generateCode(forMemoryCommand command: String, arguments: [String]) throws -> [String]  {
         var result: [String] = []
         switch command {
         case "push":
             switch arguments[0] {
-//            case "argument":
-//            case "local":
-//            case "static":
+            case "argument",
+                 "local",
+                 "this",
+                 "that",
+                 "pointer",
+                 "temp":
+                result += [
+                    "@\(arguments[1])",
+                    "D=A",
+                    "@\(CodeGenerator.basePointerAddressMap[arguments[0]]!)",
+                    "M=M+D",
+                    "A=M",
+                    "D=M",
+                    "@R0",
+                    "A=M",
+                    "M=D",
+                    "@\(arguments[1])",
+                    "D=A",
+                    "@\(CodeGenerator.basePointerAddressMap[arguments[0]]!)",
+                    "M=M-D"
+                ]
+            case "static":
+                result += [
+                    "@\(functionName).\(arguments[1])",
+                    "D=M",
+                    "@R0",
+                    "A=M",
+                    "M=D"
+                ]
             case "constant":
                 result += [
                     "@\(arguments[1])",
                     "D=A",
                     "@R0",
                     "A=M",
-                    "M=D",
-                    "@R0",
-                    "M=M+1"
+                    "M=D"
                 ]
-//            case "this":
-//            case "that":
-//            case "pointer":
-//            case "temp":
             default:
                 throw Error.invalidMemorySegment
             }
+            result += [  // Advance the stack pointer
+                "@R0",
+                "M=M+1"
+            ]
+            
         case "pop":
-            print()
+            result += [  // Retreat the stack pointer
+                "@R0",
+                "M=M-1"
+            ]
+            switch arguments[0] {
+                
+            case "argument",
+                "local",
+                "this",
+                "that",
+                "pointer",
+                "temp":
+                result += [
+                    "@\(arguments[1])",
+                    "D=A",
+                    "@\(CodeGenerator.basePointerAddressMap[arguments[0]]!)",
+                    "M=M+D",
+                    "@R0",
+                    "A=M",
+                    "D=M",
+                    "@\(CodeGenerator.basePointerAddressMap[arguments[0]]!)",
+                    "A=M",
+                    "M=D",
+                    "@\(arguments[1])",
+                    "D=A",
+                    "@\(CodeGenerator.basePointerAddressMap[arguments[0]]!)",
+                    "M=M-D"
+                ]
+            case "static":
+                result += [
+                    "@R0",
+                    "A=M",
+                    "D=M",
+                    "@\(functionName).\(arguments[1])",
+                    "M=D"
+                ]
+            default:
+                throw Error.invalidMemorySegment
+            }
         default:
             throw Error.invalidCommand
         }
         return result
     }
     
-    private static func generateCode(forArithmeticCommand command: String, arguments: [String]) throws -> [String] {
+    private func generateCode(forArithmeticCommand command: String, arguments: [String]) throws -> [String] {
         var result: [String] = []
         let jumpsForComparisons = [
             "eq": "JEQ",
