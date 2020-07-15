@@ -11,10 +11,8 @@ public class CodeGenerator {
     private static let basePointerAddressMap = [
         "local"   : "R1",
         "argument": "R2",
-        "pointer" : "R3",
         "this"    : "R3",
-        "that"    : "R4",
-        "temp"    : "R5"
+        "that"    : "R4"
     ]
     private static let initializationCode: [String] = [
         "// Set up the stack pointer",
@@ -75,8 +73,7 @@ public class CodeGenerator {
             case "argument",
                  "local",
                  "this",
-                 "that",
-                 "pointer":
+                 "that":
                 result += [
                     "@\(arguments[1])",
                     "D=A",
@@ -92,8 +89,9 @@ public class CodeGenerator {
                     "@\(CodeGenerator.basePointerAddressMap[arguments[0]]!)",
                     "M=M-D"
                 ]
-            case "temp":
-                let location = 5 + Int(arguments[1])!
+            case "pointer",
+                "temp":
+                let location = (arguments[0]=="pointer") ? 3 : 5 + Int(arguments[1])!
                 result += [
                     "@R\(location)",
                     "D=M",
@@ -134,8 +132,7 @@ public class CodeGenerator {
             case "argument",
                 "local",
                 "this",
-                "that",
-                "pointer":
+                "that":
                 result += [
                     "@\(arguments[1])",
                     "D=A",
@@ -152,8 +149,9 @@ public class CodeGenerator {
                     "@\(CodeGenerator.basePointerAddressMap[arguments[0]]!)",
                     "M=M-D"
                 ]
-            case "temp":
-                let location = 5 + Int(arguments[1])!
+            case "pointer",
+                "temp":
+                let location = (arguments[0]=="pointer") ? 3 : 5 + Int(arguments[1])!
                 result += [
                     "@R0",
                     "A=M",
