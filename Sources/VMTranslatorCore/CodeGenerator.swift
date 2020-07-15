@@ -91,7 +91,8 @@ public class CodeGenerator {
                 ]
             case "pointer",
                 "temp":
-                let location = (arguments[0]=="pointer") ? 3 : 5 + Int(arguments[1])!
+                var location = (arguments[0]=="pointer") ? 3 : 5
+                location    += Int(arguments[1])!
                 result += [
                     "@R\(location)",
                     "D=M",
@@ -151,7 +152,8 @@ public class CodeGenerator {
                 ]
             case "pointer",
                 "temp":
-                let location = (arguments[0]=="pointer") ? 3 : 5 + Int(arguments[1])!
+                var location = (arguments[0]=="pointer") ? 3 : 5
+                location    += Int(arguments[1])!
                 result += [
                     "@R0",
                     "A=M",
