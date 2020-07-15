@@ -24,10 +24,12 @@ public final class VMTranslator {
         }
         
         try codeFiles.forEach { path in
-            let fileContents = try String(contentsOfFile: path)
-            guard let parsedLines = Parser.parse(text: fileContents) else { throw Error.parsedToEmtpy }
-            // TODO: Process lines into assembly
-            // TODO: Write the file to disk
+            print("Processing \(path)")
+            let fileContents        = try String(contentsOfFile: path)
+            guard let parsedLines   = Parser.parse(text: fileContents) else { throw Error.parsedToEmtpy }
+            let assemblyLines       = try CodeGenerator.assemble(vmCode: parsedLines)
+            let fileToWrite         = assemblyLines.joined(separator: "\n")
+            FileManager.default.createFile(atPath: NSString(string: path).deletingPathExtension + ".asm", contents: fileToWrite.data(using: .utf8), attributes: nil)
         }
     }
 }
