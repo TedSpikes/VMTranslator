@@ -76,8 +76,7 @@ public class CodeGenerator {
                  "local",
                  "this",
                  "that",
-                 "pointer",
-                 "temp":
+                 "pointer":
                 result += [
                     "@\(arguments[1])",
                     "D=A",
@@ -92,6 +91,15 @@ public class CodeGenerator {
                     "D=A",
                     "@\(CodeGenerator.basePointerAddressMap[arguments[0]]!)",
                     "M=M-D"
+                ]
+            case "temp":
+                let location = 5 + Int(arguments[1])!
+                result += [
+                    "@R\(location)",
+                    "D=M",
+                    "@R0",
+                    "A=M",
+                    "M=D"
                 ]
             case "static":
                 result += [
@@ -123,13 +131,11 @@ public class CodeGenerator {
                 "M=M-1"
             ]
             switch arguments[0] {
-                
             case "argument",
                 "local",
                 "this",
                 "that",
-                "pointer",
-                "temp":
+                "pointer":
                 result += [
                     "@\(arguments[1])",
                     "D=A",
@@ -145,6 +151,15 @@ public class CodeGenerator {
                     "D=A",
                     "@\(CodeGenerator.basePointerAddressMap[arguments[0]]!)",
                     "M=M-D"
+                ]
+            case "temp":
+                let location = 5 + Int(arguments[1])!
+                result += [
+                    "@R0",
+                    "A=M",
+                    "D=M",
+                    "@R\(location)",
+                    "M=D"
                 ]
             case "static":
                 result += [
