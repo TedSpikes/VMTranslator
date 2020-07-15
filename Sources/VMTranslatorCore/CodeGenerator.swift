@@ -8,6 +8,8 @@
 import Foundation
 
 public class CodeGenerator {
+    private static var labelCount = 0
+    
     public static func assemble(vmCode: [String]) throws -> [String]  {
         var result:[String] = []
         
@@ -15,13 +17,21 @@ public class CodeGenerator {
         result += initializationCode
         
         try vmCode.forEach { line in
-            result.append("// " + line)
+            result.append("\n" + "// " + line)
             let splitLine = line.components(separatedBy: " ")
             switch splitLine[0] {
             case "pop",
                  "push":
                 result += try generateCode(forMemoryCommand: splitLine[0], arguments: Array(splitLine[1...]))
-            case "add":
+            case "add",
+                 "sub",
+                 "and",
+                 "or",
+                 "neg",
+                 "not",
+                 "eq",
+                 "lt",
+                 "gt":
                 result += try generateCode(forArithmeticCommand: splitLine[0], arguments: Array(splitLine[1...]))
             default:
                 throw Error.invalidCommand
@@ -82,24 +92,82 @@ public class CodeGenerator {
     
     private static func generateCode(forArithmeticCommand command: String, arguments: [String]) throws -> [String] {
         var result: [String] = []
+        let jumpsForComparisons = [
+            "eq": "JEQ",
+            "lt": "JLT",
+            "gt": "JGT"
+        ]
+        let operatorMap = [
+            "add": "+",
+            "sub": "-",
+            "and": "&",
+            "or" : "|"
+        ]
+        let loadOperandsToRegisters = [
+            "@R0",
+            "M=M-1",
+            "A=M",
+            "D=M",
+            "@R0",
+            "M=M-1",
+            "A=M"
+        ]
+        
         switch command {
-        case "add":
+        case "add",
+             "sub",
+             "and",
+             "or":
+            result += loadOperandsToRegisters
+            result += [
+                "D=M\(operatorMap[command]!)D",
+                "M=D",
+            ]
+        case "neg":
             result += [
                 "@R0",
                 "M=M-1",
                 "A=M",
-                "D=M",
+                "M=-M"
+            ]
+        case "not":
+            result += [
                 "@R0",
                 "M=M-1",
                 "A=M",
-                "D=D+M",
-                "M=D",
-                "@R0",
-                "M=M+1"
+                "M=!M"
             ]
+        case "eq",
+             "lt",
+             "gt":
+            result += loadOperandsToRegisters
+            result += [
+                "A=M", // Load second value to A, we don't need M right now
+                "D=A-D",
+                "@TRUE\(labelCount)",
+                "D;\(jumpsForComparisons[command]!)",
+                "@FALSE\(labelCount)",
+                "0;JMP",
+                "(TRUE\(labelCount))",
+                "@R0",
+                "A=M",
+                "M=-1",
+                "@OUT\(labelCount)",
+                "0;JMP",
+                "(FALSE\(labelCount))",
+                "@R0",
+                "A=M",
+                "M=0",
+                "(OUT\(labelCount))",
+            ]
+            labelCount += 1
         default:
             throw Error.invalidCommand
         }
+        result += [  // Advance the stack pointer
+            "@R0",
+            "M=M+1"
+        ]
         return result
     }
 }
